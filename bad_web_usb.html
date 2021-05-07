@@ -1,84 +1,49 @@
 <html>
-<head>
-<title>BadUSB on the Web</title>
-</head>
-<body>
-  <form action="#">
-  <a id="gesture" href="#">Click Me</a>
-</form>
-<pre id="logger"></pre>
-<script>
-  
-  (function (logger) {
-    console.old = console.log;
-    console.log = function () {
-        var output = "", arg, i;
-
-        for (i = 0; i < arguments.length; i++) {
-            arg = arguments[i];
-            output += "<span class=\"log-" + (typeof arg) + "\">";
-
-            if (
-                typeof arg === "object" &&
-                typeof JSON === "object" &&
-                typeof JSON.stringify === "function"
-            ) {
-                output += JSON.stringify(arg);   
-            } else {
-                output += arg;   
-            }
-
-            output += "</span>&nbsp;";
+  <head>
+    <title>BadUSB on the Web</title>
+  </head>
+  <body>
+    <form action="#">
+      <a id="gesture" href="#">Click Me</a>
+    </form>
+    <script>
+      
+      document.getElementById("gesture").onclick = () => {
+        try {
+          connect()
+        } catch (e) {
+          console.log(e.name + ":" + e.message
         }
-
-        logger.innerHTML += output + "<br>";
-        console.old.apply(undefined, arguments);
-    };
-})(document.getElementById("logger")); //copied and pasted this ^^ lol
-
-var device = null;
-
-document.getElementById('gesture').onclick = function() {
-navigator.usb.requestDevice({ filters: [{ vendorId: 0x05ac, productId: 0x12A8 }] })
-.then(theDevice => {
-  device = theDevice
-  console.log(device.productName);
-  console.log(device.manufacturerName);
-  console.log("SerialNumber: " + device.serialNumber);
-
-  device.open().then(function() {
-    console.log("Device Opened");
-
-    let configurationId = 5;
-
-    device.selectConfiguration(configurationId).then(function() {
-      console.log("Set Configuration to " + configurationId);
-      if (device.configuration != null) {
-        console.log("Curent Configuration: " + device.configuration.configurationValue);
-
-        device.configurations.forEach(configuration => {
-          console.log("Configuration " + configuration.configurationValue + " : " + (configuration.configurationName || "unnamed"));
-          configuration.interfaces.forEach(deviceInterface => {
-            console.log("Interface " + deviceInterface.interfaceNumber + "(" + (deviceInterface.claimed ? "claimed" : "unclaimed") + ") : " + (configuration.configurationName || "unnamed"));
-            deviceInterface.alternates.forEach(alternate => {
-              console.log("Alternate " + alternate.alternateSetting + " : Class " + alternate.interfaceClass + " : SubClass " + alternate.interfaceSubclass + " : Protocol " + alternate.interfaceProtocol + " - " + alternate.interfaceName);
-            });
-          })
-        });
-
-        device.claimInterface(0).then(function() {
-          console.log("Interface Claimed");
-        })
-        .catch(error => { console.log(error.name + " : " + error.message) });
       }
-    })
-    .catch(error => { console.log(error.name + " : " + error.message) });
-  })
-  .catch(error => { console.log(error.name + " : " + error.message) });
-})
-.catch(error => { console.log(error.name + " : " + error.message); });
-}
+      
+      async function connect() {
+        let device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x05ac, productId: 0x12A8 }] })
+        console.log(`Product name: ${device.productName}    Manufacturer name: ${device.manufacturerName}    Serial Number: ${device.serialNumber}`)
+        
+        await device.open()
+        console.log("Device opened")
+        
+        let configurationId = 5
+        
+        await device.selectConfiguration(configurationId)
+        console.log(`Set configuration to ${configurationId}`)
+        if (device.configuration !== null) {
+          console.log(`Curent Configuration: ${device.configuration.configurationValue}`) 
+          device.configurations.forEach(configuration => {
+            console.log("Configuration " + configuration.configurationValue + " : " + (configuration.configurationName || "unnamed"))
+            configuration.interfaces.forEach(deviceInterface => {
+              console.log("Interface " + deviceInterface.interfaceNumber + "(" + (deviceInterface.claimed ? "claimed" : "unclaimed") + ") : " + (configuration.configurationName || "unnamed"));
+              deviceInterface.alternates.forEach(alternate => {
+                console.log("Alternate " + alternate.alternateSetting + " : Class " + alternate.interfaceClass + " : SubClass " + alternate.interfaceSubclass + " : Protocol " + alternate.interfaceProtocol + " - " + alternate.interfaceName);
+              });
+            })
+          })
+          
+          await device.claimInterface(0)
+          console.log("Interface claimed")
+        }
+      }
 
-</script>
-</body>
+    </script>
+  </body>
 </html>
